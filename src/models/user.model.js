@@ -1,4 +1,5 @@
-import mongoose,{Schema, model, trusted} from 'mongoose'
+import 'dotenv/config'
+import mongoose,{Schema, model} from 'mongoose'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 
@@ -60,6 +61,7 @@ userSchema.pre("save", async function (next) {
 userSchema.methods.isPasswordCorrect = async function (password){
     return await bcrypt.compare(password, this.password) // Compares plain text with hashed DB password; returns boolean
 }
+
 userSchema.methods.generateAccessToken = function(){
    return jwt.sign(
         {
