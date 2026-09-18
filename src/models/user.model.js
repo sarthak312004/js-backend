@@ -1,4 +1,6 @@
 import mongoose,{Schema, model, trusted} from 'mongoose'
+import jwt from 'jsonwebtoken'
+import bcrypt from 'bcrypt'
 
 const userSchema = new Schema(
     {
@@ -46,4 +48,42 @@ const userSchema = new Schema(
 
     },{timestamps:true}
 )
+// AUTOMATIC: Runs right before .save() to hash new/changed passwords
+userSchema.pre("save", async function (next) {
+    if(!this.isModified("password")) return next() // Skip if password hasn't changed
+
+    this.password = await bcrypt.hash(this.password, 10) // Hash password with 10 salt rounds
+    next() // Proceed to save in database
+})
+
+// MANUAL: Called manually after finding user (e.g., await user.isPasswordCorrect(inputPassword))
+userSchema.methods.isPasswordCorrect = async function (password){
+    return await bcrypt.compare(password, this.password) // Compares plain text with hashed DB password; returns boolean
+}
+userSchema.methods.generateAccessToken = function(){
+   return jwt.sign(
+        {
+            _id:this._id,
+            email:this.email,
+            username:this.username,
+            fullname:this.fullname
+        },
+        process.env.ACCESS_TOKEN_SECRETE,
+        {
+            expiresIn: process.env.ACCESS_TOKEN_EXPIRY
+        }
+    )
+}
+
+userSchema.methods.generateRefreshToken = function(){
+    return jwt.sign(
+        {
+            _id:this._id,
+        },
+        process.env.REFRESH_TOKEN_SECRETE,
+        {
+            expiresIn: process.env.REFRESH_TOKEN_EXPIRY
+        }
+    )
+}
 export const User = model('User', userSchema)
