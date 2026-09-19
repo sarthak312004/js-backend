@@ -43,18 +43,17 @@ const userSchema = new Schema(
             type: String,
             required: [true, "Password is required"]
         },
-        refershToken:{
+        refreshToken:{
             type:String
         }
 
     },{timestamps:true}
 )
 // AUTOMATIC: Runs right before .save() to hash new/changed passwords
-userSchema.pre("save", async function (next) {
-    if(!this.isModified("password")) return next() // Skip if password hasn't changed
+userSchema.pre("save", async function () {
+    if(!this.isModified("password")) return // Skip if password hasn't changed
 
     this.password = await bcrypt.hash(this.password, 10) // Hash password with 10 salt rounds
-    next() // Proceed to save in database
 })
 
 // MANUAL: Called manually after finding user (e.g., await user.isPasswordCorrect(inputPassword))
