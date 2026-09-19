@@ -15,4 +15,10 @@ app.use(express.urlencoded({extended: true, limit:"16kb"})) //parse URL-encoded 
 app.use(express.static("public")) //The files inside the public folder can be accessed directly.
 app.use(cookieParser()) // This middleware reads cookies sent by the browser and makes them easily accessible through: req.cookies
 
+//routes import
+import userRouter from './routes/user.routes.js'
+
+//routes declaration
+app.use("/api/v1/users", userRouter)
+
 export {app}
