@@ -18,52 +18,49 @@ import { ApiResponse } from "../utils/ApiResponse.js";
 // })  
 
 const registerUser = async (req, res) => {
+    try {
+        
+    
     const {email, fullname, username, password} = req.body
 
-    if([fullname, email, password, username].some((field)=> field?.trim() === "")){
-        throw new ApiError(400, "All fields are required")
+    if(!email || !fullname || !username || !password){
+        throw new ApiError(409, "All fields are required ")
     }
 
-    const existedUser = await User.findOne({
-        $or:[{ username }, { email }]
+    const userExist = await User.findOne({
+        $or:[{email}, {username}]
     })
 
-    if(existedUser){
-        throw new ApiError(409, "User with email or username already exist")
-    }
-
-    const avatarLocalPath = req.files?.avatar?.[0]?.path;
-    const coverImageLocalPath = req.files?.coverImage?.[0]?.path;
+    if(userExist) throw new ApiError(309, "User with this username or email already exist")
     
-    if(!avatarLocalPath){
-        throw new ApiError(400, "Avatar file is required")
-    }
-
+    const avatarLocalPath = req.files?.avatar?.[0]?.path;
+    const coverImgLocalPath = req.files?.coverImage?.[0]?.path;
+    
     const avatar = await uploadOnCloudinary(avatarLocalPath)
-    const coverImage = await uploadOnCloudinary(coverImageLocalPath)
-
+    const coverImg = coverImgLocalPath? await uploadOnCloudinary(coverImgLocalPath) : null
+    
     if(!avatar){
-        throw new ApiError(400, "Avatar file is required")
+        throw new ApiError(500, "Failed to upload on cloudinary")
     }
 
     const user = await User.create({
-        fullname,
-        avatar: avatar.url,
-        coverImg: coverImage?.url || "",
         email,
+        fullname,
+        username,
         password,
-        username: username.toLowerCase()
+        avatar: avatar.url,
+        coverImg: coverImg?.url || ""
     })
 
-    const createdUser = await User.findById(user._id).select(
-        "-password -refreshToken"
+    const createdUser = await User.findById(user._id).select("-password") 
+
+    return res.status(200).json(
+        new ApiResponse(200, createdUser, "User created successfully")
     )
-    if(!createdUser) {
-        throw new ApiError(500, "Something went wrong while registering user")
+
+    } catch (error) {
+        next(error)
     }
-    return res.status(201).json(
-        new ApiResponse(200, createdUser, "User registered successfully")
-    )
 }
 
 const loginUser = async(req, res) => {
