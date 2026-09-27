@@ -158,7 +158,7 @@ const logoutUser = async (req, res) => {
         .clearCookie("refreshToken", options)
         .json(new ApiResponse(200, {}, "User logged out"))
 
-}
+} 
 
 const refreshAccessToken = async (req, res) => {
     try {
@@ -284,6 +284,47 @@ const updateUserCoverImage = async (req, res) => {
         .status(200)
         .json(new ApiResponse(200, user,"CoverImage updated successfully"))
 }
+
+const getCurrentUserProfile = async (req, res) => {
+    const {username} = req.body;
+
+    if(!username?.trim()) throw new ApiError(401,"Username is missing")
+    
+    const channel = await User.aggregate([
+        {
+            $match:{
+                username:username?.toLowerCase()
+            }
+        },
+        {
+            $lookup:{
+                from:"subscription",
+                localField:"_id",
+                foreignField:"channel",
+                as:"subscribers"
+            }
+        },
+        {
+            $lookup:{
+                from:"subscription",
+                localField:"_id",
+                foreignField:"subscriber",
+                as:"subscribedTo"
+            }
+        },
+        {
+            $addFields:{
+                subscribersCount:{
+                    $size:"$subscribers"
+                },
+                channelsSubscribedToCount:{
+                    $size:"$subscribedTo"
+                }
+            }
+        }
+    ])
+}
+
 export {
     registerUser, 
     loginUser, 
