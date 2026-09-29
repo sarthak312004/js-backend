@@ -1,4 +1,5 @@
 import 'dotenv/config'
+import mongoose from 'mongoose'
 import { ApiError } from "../utils/ApiError.js";
 import { User } from '../models/user.model.js'
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
@@ -286,7 +287,7 @@ const updateUserCoverImage = async (req, res) => {
 }
 
 const getCurrentUserProfile = async (req, res) => {
-    const {username} = req.body;
+    const {username} = req.body; 
 
     if(!username?.trim()) throw new ApiError(401,"Username is missing")
 
@@ -350,6 +351,56 @@ const getCurrentUserProfile = async (req, res) => {
                 .json(new ApiResponse(200,channel[0], "User channel fetched successufully"))
 }
 
+const getWatchHistory = async (req, res) => {
+    const user = await User.aggregate(
+        [
+            {
+                $match:{
+                    _id: new mongoose.Types.ObjectId(req.user._id)
+                }
+            },
+            {
+                $lookup:{
+                    from:"videos",
+                    localField:"watchHistory",
+                    foreignField:"_id",
+                    as:"watchHistory",
+                    pipeline:[
+                        {
+                            $lookup:{
+                                from:"users",
+                                localField:"owner",
+                                foreignField:"_id",
+                                as:"owner",
+                                pipeline:[
+                                    {
+                                        $project:{
+                                            fullname:1,
+                                            username:1,
+                                            avatar:1, 
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        {
+                            $addFields:{
+                                owner:{
+                                    $first:"$owner"
+                                }
+                            }
+                        }
+                    ]
+                }
+            }
+        ]
+    )
+
+    return res
+            .status(200)
+            .json(new ApiResponse(200, user[0].watchHistory, "Watch history fetched successfully"))
+}
+
 export {
     registerUser, 
     loginUser, 
@@ -360,5 +411,6 @@ export {
     updateAccountDetails,
     updateUserAvatar,
     updateUserCoverImage,
-    getCurrentUserProfile
+    getCurrentUserProfile,
+    getWatchHistory
 }
